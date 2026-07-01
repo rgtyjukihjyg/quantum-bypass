@@ -1,90 +1,93 @@
--- ====== QUANTUM ONYX - ПОЛНОСТЬЮ БЕЗ КЛЮЧА ======
--- В этом коде нет ни одной проверки ключа.
--- Он просто загружает премиум-скрипт напрямую.
+-- ====== QUANTUM ONYX - ОБХОД ПРЕМИУМ-СКРИПТА ======
+-- Этот код перехватывает загрузку премиум-скрипта и возвращает свой собственный.
 
-print("[BYPASS] Загрузка премиум-версии без ключа...")
+print("[BYPASS] Запуск обхода...")
 
--- 1. Устанавливаем флаги
-getgenv().LoadedQuantum = true
-getgenv().IsPremium = true
-getgenv().PremiumUnlocked = true
-getgenv().script_key = "BYPASS"
+-- 1. Сохраняем оригинальную функцию HttpGet
+local oldHttpGet = game.HttpGet
 
--- 2. Ссылки на скрипты
-local Directory = "https://raw.githubusercontent.com/flazhy/QuantumOnyx/refs/heads/main/Games"
-local Api = "https://api.luarmor.net/files/v4/loaders"
-
-local Scripts = {
-    Free = {
-        [994732206] = Directory .. "/BloxFruits.lua",
-        [9186719164] = Directory .. "/SailorPiece.lua",
-        [8191429227] = Directory .. "/CutTrees.lua",
-    },
-    Premium = {
-        [994732206] = Api .. "/0ae9fe4cf963e3a13d25eed0e2ce5940.lua",
-        [10004244222] = Api .. "/63980a492928552d074ceee243a918d6.lua",
-        [9792947201] = Api .. "/50e8e00251d97215e14313c0bb012058.lua",
-        [10200395747] = Api .. "/65265b2869c03f57430ee45357d8c3f9.lua"
-    }
-}
-
-local gameId = game.GameId
-
--- 3. Показываем уведомление
-local function ShowNotification()
-    local SG = Instance.new("ScreenGui")
-    SG.Parent = game:GetService("CoreGui")
-    SG.ResetOnSpawn = false
-    
-    local Frame = Instance.new("Frame")
-    Frame.Size = UDim2.new(0, 350, 0, 80)
-    Frame.Position = UDim2.new(0.5, -175, 0.5, -40)
-    Frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    Frame.BackgroundTransparency = 0.2
-    Frame.Parent = SG
-    
-    local Corner = Instance.new("UICorner")
-    Corner.CornerRadius = UDim.new(0, 12)
-    Corner.Parent = Frame
-    
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1, 0, 1, 0)
-    Label.BackgroundTransparency = 1
-    Label.Text = "🔥 PREMIUM ACTIVATED\nAll features unlocked!"
-    Label.TextColor3 = Color3.fromRGB(0, 255, 150)
-    Label.TextSize = 18
-    Label.Font = Enum.Font.FredokaOne
-    Label.TextWrapped = true
-    Label.Parent = Frame
-    
-    task.delay(3, function()
-        SG:Destroy()
-    end)
-end
-
-ShowNotification()
-
--- 4. Загружаем премиум-скрипт
-local url = Scripts.Premium[gameId]
-if url then
-    print("[BYPASS] Загрузка премиум-скрипта для GameId: " .. gameId)
-    local success, err = pcall(function()
-        loadstring(game:HttpGet(url))()
-    end)
-    if not success then
-        print("[BYPASS] Ошибка загрузки: " .. tostring(err))
-        print("[BYPASS] Пробуем загрузить бесплатную версию...")
-        local freeUrl = Scripts.Free[gameId]
-        if freeUrl then
-            loadstring(game:HttpGet(freeUrl))()
+-- 2. Подменяем HttpGet
+game.HttpGet = function(self, url, ...)
+    if url and type(url) == "string" then
+        -- Если это запрос к Luarmor (премиум-скрипт)
+        if url:find("luarmor.net/files/v4/loaders") then
+            print("[BYPASS] Перехвачен премиум-скрипт. Возвращаем свою версию.")
+            
+            -- Возвращаем СВОЙ премиум-скрипт (без проверок)
+            return loadstring([[
+                print("[PREMIUM] Наш премиум-скрипт загружен!")
+                print("[PREMIUM] Все функции разблокированы.")
+                
+                -- Флаги для системы
+                getgenv().LoadedQuantum = true
+                getgenv().IsPremium = true
+                getgenv().PremiumUnlocked = true
+                
+                -- ====== НАШИ ПРЕМИУМ-ФУНКЦИИ ======
+                -- Здесь ты можешь добавить любые функции
+                
+                -- Автофарм (пример)
+                _G.AutoFarm = function()
+                    print("[PREMIUM] Автофарм запущен!")
+                    -- Твой код автофарма
+                end
+                
+                -- Телепорт (пример)
+                _G.Teleport = function(pos)
+                    if game.Players.LocalPlayer and game.Players.LocalPlayer.Character then
+                        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = pos
+                        print("[PREMIUM] Телепорт в " .. tostring(pos))
+                    end
+                end
+                
+                -- ESP (пример)
+                _G.ESP = function()
+                    print("[PREMIUM] ESP включен!")
+                    -- Твой код ESP
+                end
+                
+                print("[PREMIUM] ✅ Все функции готовы!")
+                
+                -- Возвращаем таблицу, чтобы скрипт не ругался
+                return {
+                    AutoFarm = _G.AutoFarm,
+                    Teleport = _G.Teleport,
+                    ESP = _G.ESP
+                }
+            ]])()
+        end
+        
+        -- Если это запрос к SDK
+        if url:find("sdkapi-public.luarmor.net") then
+            print("[BYPASS] Перехвачен SDK. Возвращаем подделку.")
+            return loadstring([[
+                return {
+                    check_key = function(key) 
+                        return true, { code = "KEY_VALID" } 
+                    end,
+                    load_script = function()
+                        print("[QO] Премиум загружен через обход")
+                        getgenv().LoadedQuantum = true
+                    end,
+                    script_id = "0ae9fe4cf963e3a13d25eed0e2ce5940"
+                }
+            ]])()
         end
     end
-else
-    print("[BYPASS] Нет премиум-скрипта для этой игры. Загружаем бесплатный...")
-    local freeUrl = Scripts.Free[gameId]
-    if freeUrl then
-        loadstring(game:HttpGet(freeUrl))()
-    end
+    
+    -- Если запрос не к Luarmor — используем оригинальную функцию
+    return oldHttpGet(self, url, ...)
 end
 
-print("[BYPASS] Готово!")
+-- 3. Теперь загружаем оригинальный скрипт Quantum Onyx
+print("[BYPASS] Загрузка оригинального Quantum Onyx...")
+
+local scriptContent = oldHttpGet(game, "https://raw.githubusercontent.com/flazhy/QuantumOnyx/refs/heads/main/QuantumOnyx.lua")
+if scriptContent then
+    loadstring(scriptContent)()
+    print("[BYPASS] Оригинальный скрипт загружен. Премиум заменён на наш.")
+else
+    print("[BYPASS] Не удалось загрузить оригинальный скрипт.")
+end
+
+print("[BYPASS] Готово! Теперь все премиум-функции — наши.")
