@@ -1,98 +1,59 @@
--- ====== QUANTUM ONYX - ПЕРЕХВАТ HTTP (ГАРАНТИРОВАННО) ======
-print("[BYPASS] Запуск перехватчика HTTP...")
+-- ====== QUANTUM ONYX С ОТКЛЮЧЕННОЙ ПРОВЕРКОЙ ======
+print("[BYPASS] Запуск...")
 
--- ====== 1. СОХРАНЯЕМ ОРИГИНАЛЬНЫЕ ФУНКЦИИ ======
-local oldHttpGet = game.HttpGet
-local oldHttpPost = game.HttpPost
+-- 1. Загружаем оригинальный скрипт
+local scriptContent = game:HttpGet("https://raw.githubusercontent.com/flazhy/QuantumOnxy/refs/heads/main/QuantumOnyx.lua")
 
--- ====== 2. ПЕРЕХВАТЧИК HTTP ======
-game.HttpGet = function(self, url, ...)
-    print("[BYPASS] Перехвачен GET запрос: " .. tostring(url))
+-- 2. Добавляем в начало скрипта наш код обхода
+local bypassCode = [[
+    -- ====== ОТКЛЮЧЕНИЕ ПРОВЕРКИ КЛЮЧА ======
+    print("[BYPASS] Отключение проверки ключа...")
     
-    -- Если запрос к Luarmor SDK
-    if url and type(url) == "string" then
-        if url:find("sdkapi-public.luarmor.net") or url:find("luarmor.net") then
-            print("[BYPASS] Подмена ответа Luarmor SDK...")
-            
-            -- Возвращаем поддельное SDK
-            local fakeSDK = [[
-                local api = {}
-                function api.check_key(key)
-                    return true, { code = "KEY_VALID", message = "Premium unlocked" }
-                end
-                function api.load_script()
-                    print("[QO] Premium script loaded via bypass")
-                    getgenv().LoadedQuantum = true
-                    getgenv().IsPremium = true
-                end
-                api.script_id = "0ae9fe4cf963e3a13d25eed0e2ce5940"
-                return api
-            ]]
-            return fakeSDK
+    -- Устанавливаем флаги
+    getgenv().LoadedQuantum = true
+    getgenv().IsPremium = true
+    getgenv().PremiumUnlocked = true
+    getgenv().script_key = "BYPASS_123"
+    
+    -- Переопределяем функции проверки
+    _G.VerifyKey = function(key, callback)
+        if callback then
+            callback("✅ Premium unlocked!", Color3.fromRGB(0, 255, 150))
         end
-        
-        -- Если запрос к самому премиум-скрипту
-        if url:find("loader") and (url:find("0ae9fe4cf963e3a13d25eed0e2ce5940") or 
-           url:find("63980a492928552d074ceee243a918d6") or
-           url:find("50e8e00251d97215e14313c0bb012058") or
-           url:find("65265b2869c03f57430ee45357d8c3f9")) then
-            print("[BYPASS] Подмена премиум-скрипта...")
-            
-            -- Возвращаем заглушку с премиум-функциями
-            return [[
-                print("=== QUANTUM ONYX PREMIUM ACTIVATED ===")
-                print("All premium features are now available!")
-                
-                -- Создаем GUI с уведомлением
-                local SG = Instance.new("ScreenGui")
-                SG.Parent = game:GetService("CoreGui")
-                local Frame = Instance.new("Frame")
-                Frame.Size = UDim2.new(0, 350, 0, 80)
-                Frame.Position = UDim2.new(0.5, -175, 0.5, -40)
-                Frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-                Frame.BackgroundTransparency = 0.2
-                Frame.Parent = SG
-                local Label = Instance.new("TextLabel")
-                Label.Size = UDim2.new(1, 0, 1, 0)
-                Label.BackgroundTransparency = 1
-                Label.Text = "🔥 PREMIUM ACTIVATED\nAll features unlocked!"
-                Label.TextColor3 = Color3.fromRGB(0, 255, 150)
-                Label.TextSize = 18
-                Label.Font = Enum.Font.FredokaOne
-                Label.TextWrapped = true
-                Label.Parent = Frame
-                task.delay(3, function() SG:Destroy() end)
-                
-                -- Флаги премиума
-                getgenv().LoadedQuantum = true
-                getgenv().IsPremium = true
-                getgenv().PremiumUnlocked = true
-                
-                print("[BYPASS] ✅ Премиум успешно активирован!")
-            ]]
-        end
+        return true, {
+            code = "KEY_VALID",
+            message = "Premium access granted"
+        }
     end
     
-    -- Если запрос не к Luarmor - используем оригинальную функцию
-    return oldHttpGet(self, url, ...)
-end
-
--- ====== 3. ЗАГРУЖАЕМ ОРИГИНАЛЬНЫЙ СКРИПТ ======
-print("[BYPASS] Загрузка оригинального Quantum Onyx...")
-
-local success, err = pcall(function()
-    local scriptContent = oldHttpGet(game, "https://raw.githubusercontent.com/flazhy/QuantumOnyx/refs/heads/main/QuantumOnyx.lua")
-    if scriptContent and #scriptContent > 100 then
-        loadstring(scriptContent)()
-        print("[BYPASS] Скрипт загружен!")
-    else
-        print("[BYPASS] Ошибка: скрипт пустой")
+    _G.LoadSDK = function()
+        return true, {
+            script_id = "0ae9fe4cf963e3a13d25eed0e2ce5940",
+            check_key = function(key)
+                return true, { code = "KEY_VALID" }
+            end,
+            load_script = function()
+                print("[QO] Premium script loaded")
+                return true
+            end
+        }
     end
-end)
+    
+    -- Если есть функция проверки статуса - переопределяем
+    if _G.IsKeyVerified then
+        _G.IsKeyVerified = function() return true end
+    end
+    if _G.GetKeyStatus then
+        _G.GetKeyStatus = function() return "KEY_VALID" end
+    end
+    
+    print("[BYPASS] ✅ Проверка ключа отключена!")
+]]
 
-if not success then
-    print("[BYPASS] Ошибка загрузки: " .. tostring(err))
-    print("[BYPASS] Попробуйте запустить скрипт еще раз.")
-end
+-- 3. Объединяем код
+local finalScript = bypassCode .. scriptContent
 
-print("[BYPASS] ✅ Готово! Премиум-функции должны быть доступны.")
+-- 4. Запускаем
+loadstring(finalScript)()
+
+print("[BYPASS] Готово! Скрипт запущен с отключенной проверкой ключа.")
